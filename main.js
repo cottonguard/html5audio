@@ -1,10 +1,5 @@
 const ctx = new window.AudioContext()
 
-const sec = 1.0
-const rate = ctx.sampleRate
-const frameSize = rate * sec
-const buf = ctx.createBuffer(2, frameSize, rate)
-
 const freqs = [
   261.626, 277.183,
   293.665, 311.127, 
@@ -25,33 +20,27 @@ const keyMap = {
   'm': 11
 }
 
-const sin = (t, freq, amp) => {
-  return amp * Math.sin(2 * Math.PI * freq * t)
-}
-
-const square = (t, freq, amp) => {
-  return amp * Math.sign(sin(t, freq, amp))
-}
-
-const waves = {
-  'sin': sin,
-  'square': square
-}
+const playingOscs = {}
 
 document.addEventListener('keydown', (e) => {
   const keyNo = keyMap[e.key]
   if (keyNo !== undefined) {
-    const lch = buf.getChannelData(0)
-    const rch = buf.getChannelData(1)
-    const wave = waves[document.getElementById('wave').value]
-    const freq = freqs[keyNo]
-    for (let f = 0; f < frameSize; ++f) {
-       lch[f] = rch[f] = wave(f / rate, freq, 0.5)
-    }
-    const src = ctx.createBufferSource()
-    src.buffer = buf
-    src.connect(ctx.destination)
-    src.start()
+    const osc = ctx.createOscillator()
+    osc.frequency.value = freqs[keyNo]
+    osc.type = document.getElementById('wave').value
+    osc.connect(ctx.destination)
+    osc.start()
+    playingOscs[keyNo] = osc
   }
 })
 
+document.addEventListener('keyup', (e) => {
+  const keyNo = keyMap[e.key]
+  if (keyNo !== undefined) {
+    const osc = playingOscs[keyNo]
+    if (osc !== undefined) {
+      osc.stop()
+      playingOscs[keyNo] = undefined
+    }
+  }
+})
